@@ -73,7 +73,11 @@ export function RequirementEditor({
               />
               <span className="w-3 tabular-nums text-fg">{r.weight}</span>
             </label>
-            {r.hint && <span className="text-xs text-muted">{r.hint}</span>}
+            {r.hint && (
+              <span className="min-w-0 max-w-full truncate text-xs text-muted" title={r.hint}>
+                {r.hint}
+              </span>
+            )}
           </div>
         </div>
       ))}

@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   MAX_PER_DROP,
   MAX_REQUIREMENTS,
+  describeExtraction,
   fetchSuggestions,
   suggestionsToDrafts,
   withIds,
@@ -65,11 +66,7 @@ export function HomeFlow({ serverKey }: { serverKey: boolean }) {
       if (data.mode === "jev") screening.countCall();
       const incoming = suggestionsToDrafts(data.suggestions, existing);
       setReqs([...existing, ...incoming]);
-      setNote(
-        incoming.length
-          ? `Jev sorted each line of the description and found ${incoming.length} requirement${incoming.length === 1 ? "" : "s"}. Check the types and weights.`
-          : "No new requirements found. Add them by hand.",
-      );
+      setNote(describeExtraction(data.mode, incoming.length, data.fallback, data.unquoted));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not read the job description");
     } finally {

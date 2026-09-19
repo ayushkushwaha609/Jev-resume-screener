@@ -54,6 +54,24 @@ export interface Suggestion {
   kind: Kind;
   weight: number;
   confidence: number;
+  source?: string; // the JD phrase it came from (generative extraction only)
+}
+
+export type SuggestMode = "groq" | "jev" | "demo";
+
+export function describeExtraction(mode: SuggestMode, count: number, fallback?: string, unquoted = 0): string {
+  if (count === 0) return fallback ?? "No new requirements found. Add them by hand.";
+  const n = `${count} requirement${count === 1 ? "" : "s"}`;
+  const lead =
+    mode === "groq"
+      ? `gpt-oss-120b rewrote the description into ${n}, each tied to a quote from it.`
+      : mode === "jev"
+        ? `Jev sorted each line of the description and found ${n}.`
+        : `The keyword heuristic found ${n}.`;
+  const dropped = unquoted
+    ? ` ${unquoted} more ${unquoted === 1 ? "was" : "were"} dropped because ${unquoted === 1 ? "its quote wasn't" : "their quotes weren't"} found in the description.`
+    : "";
+  return `${fallback ? fallback + " " : ""}${lead}${dropped} Check the types and weights.`;
 }
 
 export async function fetchSuggestions(title: string, description: string) {
@@ -64,7 +82,7 @@ export async function fetchSuggestions(title: string, description: string) {
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? "Could not read the job description");
-  return data as { suggestions: Suggestion[]; mode: "jev" | "demo" };
+  return data as { suggestions: Suggestion[]; mode: SuggestMode; fallback?: string; unquoted?: number };
 }
 
 export function suggestionsToDrafts(suggestions: Suggestion[], existing: DraftRequirement[]): DraftRequirement[] {
@@ -76,6 +94,6 @@ export function suggestionsToDrafts(suggestions: Suggestion[], existing: DraftRe
       text: s.text,
       kind: s.kind,
       weight: s.weight,
-      hint: s.confidence < 0.6 ? "Low confidence: check the type" : undefined,
+      hint: s.source ? `From the JD: “${s.source}”` : s.confidence < 0.6 ? "Low confidence: check the type" : undefined,
     }));
 }

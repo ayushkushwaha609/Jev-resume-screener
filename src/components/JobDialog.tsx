@@ -4,6 +4,7 @@ import { useState } from "react";
 import { RequirementEditor } from "./RequirementEditor";
 import {
   MAX_REQUIREMENTS,
+  describeExtraction,
   fetchSuggestions,
   suggestionsToDrafts,
   withIds,
@@ -37,11 +38,7 @@ export function JobDialog({
       if (data.mode === "jev") onCall();
       const incoming = suggestionsToDrafts(data.suggestions, reqs);
       setReqs([...reqs, ...incoming]);
-      setNote(
-        incoming.length
-          ? `Jev sorted each line of the description and found ${incoming.length} requirement${incoming.length === 1 ? "" : "s"}.`
-          : "No new requirements found. Add them by hand.",
-      );
+      setNote(describeExtraction(data.mode, incoming.length, data.fallback, data.unquoted));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed");
     } finally {
