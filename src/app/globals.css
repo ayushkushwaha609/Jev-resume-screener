@@ -1,26 +1,82 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --subtle: #f4f4f5;
+  --line: #e4e4e7;
+  --fg: #18181b;
+  --muted: #71717a;
+  --accent: #4f46e5;
+  --accent-soft: #eef2ff;
+  --good: #16a34a;
+  --warn: #d97706;
+  --bad: #dc2626;
+  --mark: #fef3c7;
+  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg: #09090b;
+    --surface: #111113;
+    --subtle: #18181b;
+    --line: #27272a;
+    --fg: #fafafa;
+    --muted: #a1a1aa;
+    --accent: #818cf8;
+    --accent-soft: #1e1b4b;
+    --good: #4ade80;
+    --warn: #fbbf24;
+    --bad: #f87171;
+    --mark: #422006;
+    color-scheme: dark;
   }
 }
 
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-subtle: var(--subtle);
+  --color-line: var(--line);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-good: var(--good);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
+  --color-mark: var(--mark);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+input[type="range"] {
+  accent-color: var(--accent);
+}
+
+@utility btn {
+  @apply inline-flex items-center justify-center gap-1.5 rounded-md border border-line bg-surface px-3 h-8 text-[13px] font-medium text-fg transition-colors hover:bg-subtle disabled:opacity-50 disabled:pointer-events-none;
+}
+@utility btn-primary {
+  @apply btn border-transparent bg-fg text-bg hover:bg-fg/85;
+}
+@utility btn-ghost {
+  @apply btn border-transparent bg-transparent text-muted hover:text-fg;
+}
+@utility input {
+  @apply w-full rounded-md border border-line bg-surface px-3 py-2 text-sm outline-none transition-colors placeholder:text-muted/70 focus:border-accent;
+}
+@utility label {
+  @apply text-xs font-medium uppercase tracking-wide text-muted;
+}
+@utility card {
+  @apply rounded-lg border border-line bg-surface;
 }
