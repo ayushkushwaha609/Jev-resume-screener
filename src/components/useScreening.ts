@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { MAX_CANDIDATES, toRequirements, type AppCandidate, type JobState } from "@/lib/job";
 import type { Stage } from "@/lib/ranking";
+import { keyHeaders } from "@/lib/userKey";
 
 export type Source = { file?: File; text?: string; fileName: string };
 
@@ -46,7 +47,7 @@ export function useScreening() {
         form.append("text", src.text ?? "");
         form.append("fileName", src.fileName);
       }
-      fetch("/api/screen", { method: "POST", body: form })
+      fetch("/api/screen", { method: "POST", body: form, headers: keyHeaders() })
         .then(async (res) => {
           const data = await res.json();
           if (!res.ok) throw new Error(data.error ?? "Screening failed");

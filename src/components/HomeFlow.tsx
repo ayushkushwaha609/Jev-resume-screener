@@ -14,13 +14,17 @@ import {
 import { RequirementEditor } from "./RequirementEditor";
 import { UploadZone } from "./UploadZone";
 import { useScreening } from "./useScreening";
-import { HeuristicNotice, Workspace } from "./Workspace";
+import { Workspace } from "./Workspace";
+import { KeyNotice } from "./ApiKey";
+import { useUserKey } from "@/lib/userKey";
 
 const MAX_FILE_BYTES = 4 * 1024 * 1024;
 
 // The user's own screening: job description + resumes in, ranking out.
 // Shares no state with the sample page.
-export function HomeFlow({ demo }: { demo: boolean }) {
+export function HomeFlow({ serverKey }: { serverKey: boolean }) {
+  const userKey = useUserKey();
+  const demo = !serverKey && !userKey;
   const screening = useScreening();
   const [job, setJob] = useState<JobState | null>(null);
 
@@ -118,7 +122,7 @@ export function HomeFlow({ demo }: { demo: boolean }) {
   if (job) {
     return (
       <div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6">
-        {demo && <HeuristicNotice />}
+        <KeyNotice serverKey={serverKey} />
         <Workspace
           demo={demo}
           job={job}
@@ -137,7 +141,7 @@ export function HomeFlow({ demo }: { demo: boolean }) {
 
   return (
     <div className="mx-auto max-w-6xl px-4 pb-20 pt-12 sm:px-6 sm:pt-16">
-      {demo && <HeuristicNotice />}
+      <KeyNotice serverKey={serverKey} />
       <div className="max-w-2xl">
         <h1 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
           Rank applicants on evidence, not keywords.

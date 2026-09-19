@@ -15,6 +15,7 @@ import {
   type Stage,
 } from "@/lib/ranking";
 import type { AppCandidate } from "@/lib/job";
+import { keyHeaders } from "@/lib/userKey";
 import { STAGE_LABEL } from "./bits";
 
 type Tab = "judgments" | "hood" | "resume";
@@ -62,7 +63,7 @@ export function CandidatePanel({
     try {
       const res = await fetch("/api/evidence", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...keyHeaders() },
         body: JSON.stringify({ requirement: text, text: candidate.redactedText }),
       });
       const data = await res.json();

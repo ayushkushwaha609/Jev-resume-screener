@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { KeyButton, KeyDialogHost } from "@/components/ApiKey";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -41,17 +42,21 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 Sample run
               </Link>
             </nav>
-            <a
-              href="https://docs.typesafe.ai"
-              target="_blank"
-              rel="noreferrer"
-              className="ml-auto text-xs text-muted hover:text-fg"
-            >
-              Powered by Jev ↗
-            </a>
+            <div className="ml-auto flex items-center gap-4">
+              <a
+                href="https://docs.typesafe.ai"
+                target="_blank"
+                rel="noreferrer"
+                className="hidden text-xs text-muted hover:text-fg sm:inline"
+              >
+                Powered by Jev ↗
+              </a>
+              <KeyButton />
+            </div>
           </div>
         </header>
         <main className="flex-1">{children}</main>
+        <KeyDialogHost />
       </body>
     </html>
   );

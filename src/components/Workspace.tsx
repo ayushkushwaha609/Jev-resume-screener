@@ -87,9 +87,13 @@ export function Workspace({
     };
   }, [candidates]);
 
-  const outdated = ranked.filter(
-    (r) => !scoring.has(r.candidate.id) && (r.candidate.status === "error" || (r.stale && r.candidate.status === "scored")),
-  );
+  const outdated = ranked.filter((r) => {
+    const c = r.candidate;
+    if (scoring.has(c.id)) return false;
+    if (c.status === "error" || (r.stale && c.status === "scored")) return true;
+    // Screened by the keyword heuristic, but a key is available now.
+    return !demo && c.mode === "demo" && (c.status === "scored" || c.status === "invalid");
+  });
 
   function applyJob(next: JobState) {
     setRerankMs(timeRank(candidates, next));
@@ -228,7 +232,7 @@ export function Workspace({
             <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-accent/30 bg-accent-soft px-4 py-2.5 text-sm">
               <span>
                 {outdated.length} resume{outdated.length === 1 ? "" : "s"} need screening
-                <span className="text-muted"> — failed, or scored before the requirements changed.</span>
+                <span className="text-muted"> — failed, scored before a change, or scored without Jev.</span>
               </span>
               <button
                 className="btn-primary shrink-0"
@@ -413,17 +417,5 @@ function WeightRow({
         className="mt-1 w-full"
       />
     </label>
-  );
-}
-
-export function HeuristicNotice() {
-  return (
-    <div className="mb-6 rounded-lg border border-warn/30 bg-warn/10 px-4 py-3 text-sm">
-      <span className="font-medium text-warn">Heuristic mode.</span>{" "}
-      <span className="text-muted">
-        No <code className="font-mono text-[12px]">TYPESAFE_API_KEY</code> is set, so scores come from keyword
-        matching, not Jev.
-      </span>
-    </div>
   );
 }

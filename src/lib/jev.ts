@@ -2,9 +2,10 @@
 // screening a resume, suggesting requirements from a job description,
 // and finding the resume lines that support one requirement.
 //
-// Without TYPESAFE_API_KEY each workflow falls back to a keyword heuristic
-// so the UI can be developed. The same heuristic doubles as the keyword
-// baseline that Jev's ranking is compared against.
+// Each call uses the visitor's own key if they sent one, else the site's
+// TYPESAFE_API_KEY. With neither, workflows fall back to a keyword heuristic
+// so the UI still works. The same heuristic doubles as the keyword baseline
+// that Jev's ranking is compared against.
 
 import {
   IS_RESUME_KEY,
@@ -22,7 +23,19 @@ const MODEL = "jev-latest";
 const MAX_RESUME_CHARS = 12_000;
 const BATCH_SIZE = 20;
 
-export const isDemoMode = () => !process.env.TYPESAFE_API_KEY;
+// The site owner's key, if any. Visitors can bring their own instead
+// (see keyFromRequest); either way a key only lives for one request.
+export const hasServerKey = () => !!process.env.TYPESAFE_API_KEY;
+
+// A visitor's key arrives in this header. It is used for the one request
+// and is never stored, logged or echoed back in errors.
+export const USER_KEY_HEADER = "x-typesafe-key";
+
+export function keyFromRequest(req: Request): string | null {
+  const own = req.headers.get(USER_KEY_HEADER)?.trim();
+  if (own && /^[\x21-\x7e]{8,512}$/.test(own)) return own;
+  return process.env.TYPESAFE_API_KEY || null;
+}
 
 export type Question =
   | { type: "noul"; instructions: string; criteria?: { true: string; false: string } }
@@ -41,7 +54,10 @@ export interface Usage {
   output_tokens: number;
 }
 
+export class KeyRejectedError extends Error {}
+
 async function ask(
+  key: string,
   state: unknown,
   questions: Record<string, Question>,
 ): Promise<{ answers: Record<string, Answer>; usage: Usage }> {
@@ -49,7 +65,7 @@ async function ask(
     const res = await fetch(ENDPOINT, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${process.env.TYPESAFE_API_KEY}`,
+        Authorization: `Bearer ${key}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ model: MODEL, state, questions }),
@@ -62,17 +78,20 @@ async function ask(
       await sleep(600 * 2 ** attempt + Math.random() * 300);
       continue;
     }
-    // Never echo the request (it contains resume text) into logs or errors.
+    // Never echo the request (resume text, key) into logs or errors.
+    if (res.status === 401 || res.status === 403) {
+      throw new KeyRejectedError("TypeSafe rejected this API key. Check it and try again.");
+    }
     throw new Error(`TypeSafe request failed with status ${res.status}`);
   }
 }
 
 // Independent questions over the same state, split into parallel requests.
-async function askBatched(state: unknown, questions: Record<string, Question>) {
+async function askBatched(key: string, state: unknown, questions: Record<string, Question>) {
   const entries = Object.entries(questions);
   const chunks: [string, Question][][] = [];
   for (let i = 0; i < entries.length; i += BATCH_SIZE) chunks.push(entries.slice(i, i + BATCH_SIZE));
-  const parts = await Promise.all(chunks.map((c) => ask(state, Object.fromEntries(c))));
+  const parts = await Promise.all(chunks.map((c) => ask(key, state, Object.fromEntries(c))));
   return {
     answers: Object.assign({}, ...parts.map((p) => p.answers)) as Record<string, Answer>,
     usage: parts.reduce(
@@ -137,6 +156,7 @@ export async function screenResume(
   job: JobContext,
   reqs: Requirement[],
   resumeText: string,
+  key: string | null,
 ): Promise<{ judgments: Judgment[]; baseline: Judgment[]; mode: "jev" | "demo"; trace: Trace }> {
   const resume = resumeText.slice(0, MAX_RESUME_CHARS);
   // The same questions answered by keyword matching, so the UI can show
@@ -164,7 +184,7 @@ export async function screenResume(
   for (const r of reqs) questions[r.id] = requirementQuestion(r);
 
   const started = Date.now();
-  if (isDemoMode()) {
+  if (!key) {
     const judgments = baseline;
     const answers = Object.fromEntries(
       judgments.map((j) => [
@@ -182,7 +202,7 @@ export async function screenResume(
     };
   }
 
-  const { answers, usage, requests } = await askBatched(state, questions);
+  const { answers, usage, requests } = await askBatched(key, state, questions);
   return {
     judgments: Object.keys(questions).map((k) => toJudgment(k, answers[k])),
     baseline,
@@ -218,10 +238,11 @@ export function splitJdLines(description: string): string[] {
 export async function suggestRequirements(
   title: string,
   description: string,
+  key: string | null,
 ): Promise<{ suggestions: Suggestion[]; mode: "jev" | "demo" }> {
   const lines = splitJdLines(description);
-  if (lines.length === 0) return { suggestions: [], mode: isDemoMode() ? "demo" : "jev" };
-  if (isDemoMode()) return { suggestions: lines.map(demoSuggest).filter(Boolean) as Suggestion[], mode: "demo" };
+  if (lines.length === 0) return { suggestions: [], mode: key ? "jev" : "demo" };
+  if (!key) return { suggestions: lines.map(demoSuggest).filter(Boolean) as Suggestion[], mode: "demo" };
 
   const questions: Record<string, Question> = {};
   lines.forEach((_, i) => {
@@ -241,6 +262,7 @@ export async function suggestRequirements(
     };
   });
   const { answers: a } = await askBatched(
+    key,
     { title, lines: Object.fromEntries(lines.map((l, i) => [`l${i}`, l])) },
     questions,
   );
@@ -284,9 +306,10 @@ export function resumeLines(text: string): string[] {
 export async function findEvidence(
   requirement: Requirement,
   resumeText: string,
+  key: string | null,
 ): Promise<{ lines: EvidenceLine[]; mode: "jev" | "demo" }> {
   const lines = resumeLines(resumeText);
-  if (isDemoMode()) {
+  if (!key) {
     const terms = keyTerms(requirement.text);
     return {
       lines: lines.map((text, index) => ({ index, text, p: overlap(terms, text.toLowerCase()) > 0 ? 0.8 : 0.05 })),
@@ -307,6 +330,7 @@ export async function findEvidence(
     };
   });
   const { answers: a } = await askBatched(
+    key,
     { requirement: requirement.text, lines: Object.fromEntries(lines.map((l, i) => [`l${i}`, l])) },
     questions,
   );
@@ -381,4 +405,11 @@ function demoSuggest(text: string): Suggestion | null {
     label: nice ? "nice_to_have" : "must_have",
     confidence: 0.5,
   };
+}
+
+// ------------------------------------------------------------- key check
+
+// One tiny question, so a mistyped key fails here instead of mid-screening.
+export async function checkKey(key: string): Promise<void> {
+  await ask(key, { text: "hello" }, { ok: { type: "noul", instructions: "Is `text` a greeting?" } });
 }

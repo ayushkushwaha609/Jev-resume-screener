@@ -10,6 +10,7 @@ const LIMITS = {
   suggest: Number(process.env.DEMO_SUGGESTS_PER_HOUR ?? 15),
   evidence: Number(process.env.DEMO_EVIDENCE_PER_HOUR ?? 40),
   extract: Number(process.env.DEMO_EXTRACTS_PER_HOUR ?? 30),
+  check: 20,
 };
 
 export type Bucket = keyof typeof LIMITS;

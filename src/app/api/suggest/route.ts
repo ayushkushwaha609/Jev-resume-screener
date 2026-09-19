@@ -1,4 +1,4 @@
-import { suggestRequirements } from "@/lib/jev";
+import { KeyRejectedError, keyFromRequest, suggestRequirements } from "@/lib/jev";
 import { rateLimit } from "@/lib/limit";
 
 export async function POST(req: Request) {
@@ -8,8 +8,9 @@ export async function POST(req: Request) {
   const description = typeof body?.description === "string" ? body.description.slice(0, 20_000) : "";
   if (!description.trim()) return Response.json({ error: "Paste a job description first" }, { status: 400 });
   try {
-    return Response.json(await suggestRequirements(String(body.title ?? ""), description));
+    return Response.json(await suggestRequirements(String(body.title ?? ""), description, keyFromRequest(req)));
   } catch (e) {
-    return Response.json({ error: e instanceof Error ? e.message : "Failed" }, { status: 502 });
+    const status = e instanceof KeyRejectedError ? 401 : 502;
+    return Response.json({ error: e instanceof Error ? e.message : "Failed" }, { status });
   }
 }

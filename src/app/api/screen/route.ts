@@ -1,5 +1,5 @@
 import { ACCEPTED, extractText, guessName, redact } from "@/lib/extract";
-import { screenResume } from "@/lib/jev";
+import { KeyRejectedError, keyFromRequest, screenResume } from "@/lib/jev";
 import { rateLimit } from "@/lib/limit";
 import { parseJob } from "@/lib/validate";
 
@@ -45,9 +45,10 @@ export async function POST(req: Request) {
   const displayName = guessName(raw, fileName);
   const redactedText = redact(raw, displayName);
   try {
-    const result = await screenResume(job, job.requirements, redactedText);
+    const result = await screenResume(job, job.requirements, redactedText, keyFromRequest(req));
     return Response.json({ displayName, fileName, redactedText, ...result });
   } catch (e) {
-    return Response.json({ error: e instanceof Error ? e.message : "Screening failed" }, { status: 502 });
+    const status = e instanceof KeyRejectedError ? 401 : 502;
+    return Response.json({ error: e instanceof Error ? e.message : "Screening failed" }, { status });
   }
 }

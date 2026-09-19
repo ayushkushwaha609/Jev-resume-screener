@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { SampleFlow } from "@/components/SampleFlow";
-import { isDemoMode } from "@/lib/jev";
+import { hasServerKey } from "@/lib/jev";
 
 export const metadata: Metadata = {
   title: "Sample run — Sift",
@@ -10,5 +10,5 @@ export const metadata: Metadata = {
 
 export default async function SamplePage() {
   await connection();
-  return <SampleFlow demo={isDemoMode()} />;
+  return <SampleFlow serverKey={hasServerKey()} />;
 }

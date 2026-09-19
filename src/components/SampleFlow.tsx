@@ -5,7 +5,9 @@ import Link from "next/link";
 import type { JobState } from "@/lib/job";
 import { SAMPLE_JOB, SAMPLE_RESUMES } from "@/lib/sample";
 import { useScreening } from "./useScreening";
-import { HeuristicNotice, Workspace } from "./Workspace";
+import { Workspace } from "./Workspace";
+import { KeyNotice } from "./ApiKey";
+import { useUserKey } from "@/lib/userKey";
 
 const sampleJob = (): JobState => ({
   title: SAMPLE_JOB.title,
@@ -23,7 +25,9 @@ const PRIMITIVES = [
 // A fixed, fictional run. It has its own session and never touches the
 // user's own screening on the home page. Runs only on click, so link
 // previews and crawlers don't spend API credits.
-export function SampleFlow({ demo }: { demo: boolean }) {
+export function SampleFlow({ serverKey }: { serverKey: boolean }) {
+  const userKey = useUserKey();
+  const demo = !serverKey && !userKey;
   const screening = useScreening();
   const [job, setJob] = useState<JobState | null>(null);
 
@@ -41,7 +45,7 @@ export function SampleFlow({ demo }: { demo: boolean }) {
   if (job) {
     return (
       <div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6">
-        {demo && <HeuristicNotice />}
+        <KeyNotice serverKey={serverKey} />
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-subtle px-4 py-2.5 text-sm">
           <span>
             <span className="font-medium">Sample run.</span>{" "}
@@ -69,7 +73,7 @@ export function SampleFlow({ demo }: { demo: boolean }) {
 
   return (
     <div className="mx-auto max-w-4xl px-4 pb-20 pt-12 sm:px-6 sm:pt-16">
-      {demo && <HeuristicNotice />}
+      <KeyNotice serverKey={serverKey} />
       <p className="label">Sample run</p>
       <h1 className="mt-3 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
         Eight applicants built to fool a keyword filter.

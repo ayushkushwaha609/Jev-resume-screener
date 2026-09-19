@@ -3,6 +3,7 @@
 
 import type { Trace } from "./jev";
 import type { Candidate, Judgment, Kind, Requirement } from "./ranking";
+import { keyHeaders } from "./userKey";
 
 export interface DraftRequirement {
   key: string; // stable React key
@@ -58,7 +59,7 @@ export interface Suggestion {
 export async function fetchSuggestions(title: string, description: string) {
   const res = await fetch("/api/suggest", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...keyHeaders() },
     body: JSON.stringify({ title, description }),
   });
   const data = await res.json();
